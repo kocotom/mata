@@ -8,6 +8,7 @@
 #include <ostream>
 #include <vector>
 #include <cassert>
+#include <queue>
 
 #include "mata/nfa/delta.hh"
 #include "mata/utils/partition.hh"
