@@ -1,0 +1,678 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
+#include "mata/utils/partition.hh"
+
+using namespace mata::utils;
+
+
+TEST_CASE("mata::utils::Partition") {
+    SECTION("Create simple partition with 1 block") {
+        Partition p{10};
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 1);
+        CHECK(p.num_of_nodes() == 1);
+        CHECK(p.in_same_block({}));
+        CHECK(p.in_same_block({0})); 
+        CHECK(p.in_same_block(0, 1));
+        CHECK(p.in_same_block(1, 8));
+        CHECK(p.in_same_block({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+        for(size_t i = 0; i < 10; ++i) {
+            CHECK(p.get_state_info(i).idx() == i);
+            CHECK(p.get_state_info(i).block_item_idx() == i);
+            CHECK(p.get_state_info(i).block_idx() == 0);
+            CHECK(p.get_state_info(i).node_idx() == 0);
+            CHECK(p.get_block_item(i).state() == i);
+            CHECK(p.get_block_item(i).idx() == i);
+            CHECK(p.get_block_item(i).block().idx() == 0);
+            CHECK(p.get_block_idx_of_state(i) == 0);
+            CHECK(p.get_block_item(i).node().idx() == 0);
+            CHECK(p.get_block_item(i).node().first().idx() == 0);
+            CHECK(p.get_block_item(i).node().last().idx() == 9);
+            CHECK(p[i].idx() == i);
+        }
+        CHECK(p.get_block(0).idx() == 0);
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p.get_block(0).size() == 10);
+        CHECK(p.get_node(0).idx() == 0);        
+        CHECK(p.get_node(0).first().idx() == 0);
+        CHECK(p.get_node(0).last().idx() == 9);
+        CHECK(p.get_node(0).size() == 10);
+        for(auto& block_item : p.get_block(0)) {
+            CHECK(block_item.block().idx() == 0);
+        }
+        for(auto& block_item : p.get_node(0)) {
+            CHECK(block_item.node().idx() == 0);
+        }
+        CHECK(p.states_in_same_block(0).size() == 10);
+        CHECK(p.partition().size() == 1);
+    }
+    
+    SECTION("Create another simple partition with 1 block") {
+        Partition p = Partition(10, {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}});
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 1);
+        CHECK(p.num_of_nodes() == 1);
+        CHECK(p.in_same_block({}));
+        CHECK(p.in_same_block({0})); 
+        CHECK(p.in_same_block(0, 1));
+        CHECK(p.in_same_block(1, 8));
+        CHECK(p.in_same_block({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+        for(size_t i = 0; i < 10; ++i) {
+            CHECK(p.get_state_info(i).idx() == i);
+            CHECK(p.get_state_info(i).block_item_idx() == i);
+            CHECK(p.get_state_info(i).block_idx() == 0);
+            CHECK(p.get_state_info(i).node_idx() == 0);
+            CHECK(p.get_block_item(i).state() == i);
+            CHECK(p.get_block_item(i).idx() == i);
+            CHECK(p.get_block_item(i).block().idx() == 0);
+            CHECK(p.get_block_item(i).node().idx() == 0);
+            CHECK(p.get_block_item(i).node().first().idx() == 0);
+            CHECK(p.get_block_item(i).node().last().idx() == 9);
+            CHECK(p[i].idx() == i);
+        }
+        CHECK(p.get_block(0).idx() == 0);
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p.get_block(0).size() == 10);
+        CHECK(p.get_node(0).idx() == 0);        
+        CHECK(p.get_node(0).first().idx() == 0);
+        CHECK(p.get_node(0).last().idx() == 9);
+        CHECK(p.get_node(0).size() == 10);
+        for(auto& block_item : p.get_block(0)) {
+            CHECK(block_item.block().idx() == 0);
+        }
+        for(auto& block_item : p.get_node(0)) {
+            CHECK(block_item.node().idx() == 0);
+        }
+        CHECK(p.states_in_same_block(0).size() == 10);
+        CHECK(p.partition().size() == 1);
+    }
+    
+    SECTION("Create a simple partition with 2 blocks") {
+        Partition p{10, {{0, 5, 8}}};
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 2);
+        CHECK(p.num_of_nodes() == 2);
+        CHECK(p.in_same_block({}));
+        CHECK(p.in_same_block({0})); 
+        CHECK(p.in_same_block(0, 5));
+        CHECK(p.in_same_block(5, 8));
+        CHECK(!p.in_same_block(6, 5));
+        CHECK(p.in_same_block({0, 5, 8}));
+        CHECK(p.in_same_block({1, 2, 3, 4, 6, 7, 9}));
+        CHECK(!p.in_same_block({1, 2, 3, 4, 5, 7, 9}));
+        CHECK(p[0].idx() == 0);
+        CHECK(p[0].state() == 0);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[0].node().idx() == 0);
+        CHECK(p.get_state_info(0).block_idx() == 0);
+        CHECK(p.get_state_info(0).node_idx() == 0);
+        CHECK(p.get_state_info(0).block_item_idx() == 0);
+        CHECK(p.get_block_item(0).node().idx() == 0);
+        CHECK(p[1].idx() == 3);
+        CHECK(p.get_state_info(1).block_idx() == 1);
+        CHECK(p.get_state_info(1).node_idx() == 1);
+        CHECK(p.get_block_item(3).state() == 1);
+        CHECK(p[1].block().idx() == 1);
+        CHECK(p[1].node().idx() == 1);
+        CHECK(p.get_block_item(3).block().idx() == 1);
+        CHECK(p.get_block_item(3).node().idx() == 1);
+        CHECK(p.get_block(0).size() == 3);
+        CHECK(p.get_block(1).size() == 7);
+        CHECK(p.get_node(0).first().idx() == 0);
+        CHECK(p.get_node(0).last().idx() == 2);
+        CHECK(p.get_node(1).first().idx() == 3);
+        CHECK(p.get_node(1).last().idx() == 9);
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p.get_block(1).node().idx() == 1);
+        CHECK(p.states_in_same_block(0).size() == 3);
+        CHECK(p.states_in_same_block(1).size() == 7);
+        CHECK(p.partition().size() == 2);
+    }
+    
+    SECTION("Create a simple partition with 3 blocks") {
+        Partition p{6, {{0}, {1, 2}}};
+        CHECK(p.num_of_states() == 6);
+        CHECK(p.num_of_block_items() == 6);
+        CHECK(p.num_of_blocks() == 3);
+        CHECK(p.num_of_nodes() == 3);
+        CHECK(p.in_same_block({}));
+        CHECK(p.in_same_block({0})); 
+        CHECK(p.in_same_block(3, 5));
+        CHECK(p.in_same_block(1, 2));
+        CHECK(!p.in_same_block(1, 4));
+        CHECK(p.in_same_block({3, 4, 5}));
+        CHECK(!p.in_same_block({2, 3, 4, 5}));
+        for(size_t i = 0; i <= 5; ++i) {
+            CHECK(p[i].idx() == i);
+            CHECK(p[i].state() == i);
+        }
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[0].node().idx() == 0);            
+        CHECK(p.get_block_item(0).block().idx() == 0);
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p[1].block().idx() == 1);
+        CHECK(p[1].node().idx() == 1);            
+        CHECK(p.get_block_item(1).block().idx() == 1);
+        CHECK(p.get_block_item(1).node().idx() == 1);
+        CHECK(p.get_node(0).first().idx() == 0);
+        CHECK(p.get_node(0).last().idx() == 0);
+        CHECK(p.get_node(1).first().idx() == 1);
+        CHECK(p.get_node(1).last().idx() == 2);
+        CHECK(p.get_node(2).first().idx() == 3);
+        CHECK(p.get_node(2).last().idx() == 5);        
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p.get_block(1).node().idx() == 1);
+        CHECK(p.get_block(2).node().idx() == 2);
+        CHECK(p.get_block(0).size() == 1);
+        CHECK(p.get_block(1).size() == 2);
+        CHECK(p.get_block(2).size() == 3);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 2);
+        CHECK(p.states_in_same_block(3).size() == 3);
+        CHECK(p.partition().size() == 3);
+    }
+    
+    SECTION("Splitting blocks") {
+        Partition p{10};
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 1);
+        CHECK(p.num_of_nodes() == 1);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 0);
+        CHECK(p.in_same_block({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 10);
+        CHECK(p.partition().size() == 1);
+        CHECK(p.get_block(0).size() == 10);
+        GenerationSparseSet<State> m1({0, 1, 2, 3, 4}, 10);
+        p.split_blocks(m1);
+        std::cout << p;
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 2);
+        CHECK(p.num_of_nodes() == 3);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 1);
+        CHECK(p.in_same_block({0, 1, 2, 3, 4}));
+        CHECK(p.in_same_block({5, 6, 7, 8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 5);
+        CHECK(p.states_in_same_block(5).size() == 5);
+        CHECK(p.partition().size() == 2);
+        CHECK(p.get_block(0).size() == 5);
+        CHECK(p.get_block(1).size() == 5);
+        GenerationSparseSet<State> m2({0, 1, 2, 5, 6, 7}, 10);
+        p.split_blocks(m2);
+        std::cout << p;
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 4);
+        CHECK(p.num_of_nodes() == 7);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 3);
+        CHECK(p.in_same_block({0, 1, 2}));
+        CHECK(p.in_same_block({3, 4}));
+        CHECK(p.in_same_block({5, 6, 7}));
+        CHECK(p.in_same_block({8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 3);
+        CHECK(p.states_in_same_block(3).size() == 2);
+        CHECK(p.states_in_same_block(5).size() == 3);
+        CHECK(p.states_in_same_block(8).size() == 2);
+        CHECK(p.partition().size() == 4);
+        GenerationSparseSet<State> m3({0, 3, 5, 8}, 10);
+        p.split_blocks(m3);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 8);
+        CHECK(p.num_of_nodes() == 15);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.in_same_block({0}));
+        CHECK(p.in_same_block({1, 2}));
+        CHECK(p.in_same_block({3}));
+        CHECK(p.in_same_block({4}));
+        CHECK(p.in_same_block({5}));
+        CHECK(p.in_same_block({6, 7}));
+        CHECK(p.in_same_block({8}));
+        CHECK(p.in_same_block({9}));
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 2);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 2);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 8);
+        GenerationSparseSet<State> m4({1, 6}, 10);
+        p.split_blocks(m4);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 10);
+        CHECK(p.num_of_nodes() == 19);          
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 1);
+        CHECK(p.states_in_same_block(2).size() == 1);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 1);
+        CHECK(p.states_in_same_block(7).size() == 1);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 10);
+        GenerationSparseSet<State> m5({0, 2, 4, 6, 8}, 10);
+        p.split_blocks(m5);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 10);
+        CHECK(p.num_of_nodes() == 19);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 1);
+        CHECK(p.states_in_same_block(2).size() == 1);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 1);
+        CHECK(p.states_in_same_block(7).size() == 1);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 10);
+    }
+    
+    SECTION("Complicated blocks splitting with swapping") {
+        Partition p{10};
+        GenerationSparseSet<State> m1({0, 2, 4, 6, 8}, 10);
+        p.split_blocks(m1);
+        CHECK(p.in_same_block(0, 2));
+        CHECK(p.in_same_block(0, 4));
+        CHECK(p.in_same_block(0, 6));
+        CHECK(p.in_same_block(0, 8));
+        CHECK(!p.in_same_block(0, 1));
+        CHECK(!p.in_same_block(0, 3));
+        CHECK(!p.in_same_block(0, 5));
+        CHECK(!p.in_same_block(0, 7));
+        CHECK(!p.in_same_block(0, 9));
+        GenerationSparseSet<State> m2({1, 9}, 10);
+        p.split_blocks(m2);
+        CHECK(p.in_same_block(1, 9));
+        CHECK(!p.in_same_block(1, 3));
+        CHECK(!p.in_same_block(1, 5));
+        CHECK(!p.in_same_block(1, 7));
+    }
+
+    SECTION("Custom copying and assigning with splitting") {
+        Partition p = Partition(5, {{2, 3}});
+        GenerationSparseSet<State> m1({0}, 5);
+        p.split_blocks(m1);
+        
+        Partition q = p;
+        Partition r = Partition(p);
+        
+        CHECK(p.num_of_states() == q.num_of_states());
+        CHECK(p.num_of_states() == r.num_of_states());
+        CHECK(p.num_of_block_items() == q.num_of_block_items());
+        CHECK(p.num_of_block_items() == r.num_of_block_items());
+        CHECK(p.num_of_blocks() == q.num_of_blocks());
+        CHECK(p.num_of_blocks() == r.num_of_blocks());        
+        CHECK(p.num_of_nodes() == q.num_of_nodes());
+        CHECK(p.num_of_nodes() == r.num_of_nodes());          
+         
+        size_t statesNum = p.num_of_states();           
+        size_t blocksNum = p.num_of_blocks();
+        size_t nodesNum = p.num_of_nodes();
+        
+        for(size_t i = 0; i < statesNum; ++i) {
+            CHECK(p[i].idx() == q[i].idx());
+            CHECK(p[i].idx() == r[i].idx());
+            CHECK(p[i].state() == q[i].state());
+            CHECK(p[i].state() == r[i].state());           
+            CHECK(p[i].block().idx() == q[i].block().idx());
+            CHECK(p[i].block().idx() == r[i].block().idx());
+        }
+         
+        for(size_t i = 0; i < blocksNum; ++i) {
+            CHECK(p[i].node().idx() == q[i].node().idx());
+            CHECK(p[i].node().idx() == r[i].node().idx());           
+        } 
+          
+        for(size_t i = 0; i < nodesNum; ++i) {
+            CHECK(p[i].node().first().idx() == q[i].node().first().idx());
+            CHECK(p[i].node().first().idx() == r[i].node().first().idx());           
+            CHECK(p[i].node().last().idx() == q[i].node().last().idx());
+            CHECK(p[i].node().last().idx() == r[i].node().last().idx());
+        }
+        
+        std::cout << q;
+        GenerationSparseSet<State> m2({1, 2}, 5);                        
+        r.split_blocks(m2);
+        r.split_blocks(m2);
+        std::cout << r;
+    }
+
+    SECTION("Custom copying and assigning without splitting") {
+        Partition q{6, {{0}, {1, 2}}};
+        Partition p = q;
+        CHECK(p.num_of_states() == 6);
+        CHECK(p.num_of_block_items() == 6);
+        CHECK(p.num_of_blocks() == 3);
+        CHECK(p.num_of_nodes() == 3);
+        CHECK(p.in_same_block({}));
+        CHECK(p.in_same_block({0})); 
+        CHECK(p.in_same_block(3, 5));
+        CHECK(p.in_same_block(1, 2));
+        CHECK(!p.in_same_block(1, 4));
+        CHECK(p.in_same_block({3, 4, 5}));
+        CHECK(!p.in_same_block({2, 3, 4, 5}));
+        for(size_t i = 0; i <= 5; ++i) {
+            CHECK(p[i].idx() == i);
+            CHECK(p[i].state() == i);
+        }
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[0].node().idx() == 0);            
+        CHECK(p.get_block_item(0).block().idx() == 0);
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p[1].block().idx() == 1);
+        CHECK(p[1].node().idx() == 1);            
+        CHECK(p.get_block_item(1).block().idx() == 1);
+        CHECK(p.get_block_item(1).node().idx() == 1);
+        CHECK(p.get_node(0).first().idx() == 0);
+        CHECK(p.get_node(0).last().idx() == 0);
+        CHECK(p.get_node(1).first().idx() == 1);
+        CHECK(p.get_node(1).last().idx() == 2);
+        CHECK(p.get_node(2).first().idx() == 3);
+        CHECK(p.get_node(2).last().idx() == 5);        
+        CHECK(p.get_block(0).node().idx() == 0);
+        CHECK(p.get_block(1).node().idx() == 1);
+        CHECK(p.get_block(2).node().idx() == 2);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 2);
+        CHECK(p.states_in_same_block(3).size() == 3);
+        CHECK(p.partition().size() == 3);
+    }
+
+    SECTION("Another splitting blocks with partition copying") {
+        Partition q{10};
+        Partition p = q;
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 1);
+        CHECK(p.num_of_nodes() == 1);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 0);
+        CHECK(p.in_same_block({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 10);
+        CHECK(p.partition().size() == 1);
+        GenerationSparseSet<State> m1({0, 1, 2, 3, 4}, 10);
+        p.split_blocks(m1);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 2);
+        CHECK(p.num_of_nodes() == 3);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 1);
+        CHECK(p.in_same_block({0, 1, 2, 3, 4}));
+        CHECK(p.in_same_block({5, 6, 7, 8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 5);
+        CHECK(p.states_in_same_block(5).size() == 5);
+        CHECK(p.partition().size() == 2);
+        GenerationSparseSet<State> m2({0, 1, 2, 5, 6, 7}, 10);
+        p.split_blocks(m2);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 4);
+        CHECK(p.num_of_nodes() == 7);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 3);
+        CHECK(p.in_same_block({0, 1, 2}));
+        CHECK(p.in_same_block({3, 4}));
+        CHECK(p.in_same_block({5, 6, 7}));
+        CHECK(p.in_same_block({8, 9}));
+        CHECK(p.states_in_same_block(0).size() == 3);
+        CHECK(p.states_in_same_block(3).size() == 2);
+        CHECK(p.states_in_same_block(5).size() == 3);
+        CHECK(p.states_in_same_block(8).size() == 2);
+        CHECK(p.partition().size() == 4);
+        GenerationSparseSet<State> m3({0, 3, 5, 8}, 10);
+        p.split_blocks(m3);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 8);
+        CHECK(p.num_of_nodes() == 15);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.in_same_block({0}));
+        CHECK(p.in_same_block({1, 2}));
+        CHECK(p.in_same_block({3}));
+        CHECK(p.in_same_block({4}));
+        CHECK(p.in_same_block({5}));
+        CHECK(p.in_same_block({6, 7}));
+        CHECK(p.in_same_block({8}));
+        CHECK(p.in_same_block({9}));
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 2);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 2);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 8);
+        GenerationSparseSet<State> m4({1, 6}, 10);
+        p.split_blocks(m4);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 10);
+        CHECK(p.num_of_nodes() == 19);          
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 1);
+        CHECK(p.states_in_same_block(2).size() == 1);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 1);
+        CHECK(p.states_in_same_block(7).size() == 1);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 10);
+        GenerationSparseSet<State> m5({0, 2, 4, 6, 8}, 10);
+        p.split_blocks(m5);
+        CHECK(p.num_of_states() == 10);
+        CHECK(p.num_of_block_items() == 10);
+        CHECK(p.num_of_blocks() == 10);
+        CHECK(p.num_of_nodes() == 19);
+        CHECK(p[0].block().idx() == 0);
+        CHECK(p[9].block().idx() == 7);
+        CHECK(p.states_in_same_block(0).size() == 1);
+        CHECK(p.states_in_same_block(1).size() == 1);
+        CHECK(p.states_in_same_block(2).size() == 1);
+        CHECK(p.states_in_same_block(3).size() == 1);
+        CHECK(p.states_in_same_block(4).size() == 1);
+        CHECK(p.states_in_same_block(5).size() == 1);
+        CHECK(p.states_in_same_block(6).size() == 1);
+        CHECK(p.states_in_same_block(7).size() == 1);
+        CHECK(p.states_in_same_block(8).size() == 1);
+        CHECK(p.states_in_same_block(9).size() == 1);
+        CHECK(p.partition().size() == 10);
+        std::cout << p;
+    }
+    
+    SECTION("Another complicated blocks splitting with swapping and copying") {
+        Partition q{10};
+        Partition p = q;
+        GenerationSparseSet<State> m1({0, 2, 4, 6, 8}, 10);
+        p.split_blocks(m1);
+        CHECK(p.in_same_block(0, 2));
+        CHECK(p.in_same_block(0, 4));
+        CHECK(p.in_same_block(0, 6));
+        CHECK(p.in_same_block(0, 8));
+        CHECK(!p.in_same_block(0, 1));
+        CHECK(!p.in_same_block(0, 3));
+        CHECK(!p.in_same_block(0, 5));
+        CHECK(!p.in_same_block(0, 7));
+        CHECK(!p.in_same_block(0, 9));
+        GenerationSparseSet<State> m2({1, 9}, 10);
+        p.split_blocks(m2);
+        CHECK(p.in_same_block(1, 9));
+        CHECK(!p.in_same_block(1, 3));
+        CHECK(!p.in_same_block(1, 5));
+        CHECK(!p.in_same_block(1, 7));
+        std::cout << p;
+    }
+    
+    SECTION("Partition iterators") {
+        Partition p = Partition(8, {{0, 1}, {2, 3, 4, 5}});
+        size_t index = 0;
+        for(auto& block_item : p.get_block(0)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 0);
+            CHECK(block_item.node().idx() == 0);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+        for(auto& block_item : p.get_block(1)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 1);
+            CHECK(block_item.node().idx() == 1);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+        for(auto& block_item : p.get_block(2)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 2);
+            CHECK(block_item.node().idx() == 2);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+        index = 0;
+        for(auto& block_item : p.get_node(0)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 0);
+            CHECK(block_item.node().idx() == 0);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+        for(auto& block_item : p.get_node(1)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 1);
+            CHECK(block_item.node().idx() == 1);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+        for(auto& block_item : p.get_node(2)) {
+            CHECK(block_item.idx() == index);
+            CHECK(block_item.block().idx() == 2);
+            CHECK(block_item.node().idx() == 2);
+            CHECK(block_item.state() == index);
+            ++index;
+        }
+    }
+    
+    SECTION("Equality of partitions") {
+        Partition p1{10};
+        Partition p2{10};
+        Partition p3{8};
+        CHECK(p1 == p2);
+        CHECK(p1 != p3);
+        GenerationSparseSet<State> m1({0}, 10);
+        p1.split_blocks(m1);
+        CHECK(p1 != p2);
+        GenerationSparseSet<State> m2({9}, 10);
+        p2.split_blocks(m2);
+        CHECK(p1 != p2);
+        p1.split_blocks(m2);
+        CHECK(p1 != p2);
+        p2.split_blocks(m1);
+        CHECK(p1 == p2);
+        GenerationSparseSet<State> m3({1, 2, 3, 4}, 10);
+        p1.split_blocks(m3);
+        GenerationSparseSet<State> m4({3, 4, 5, 6}, 10);
+        p2.split_blocks(m4);
+        CHECK(p1 != p2);
+        p1.split_blocks(m4);
+        GenerationSparseSet<State> m5({3, 4}, 10);
+        p2.split_blocks(m5);
+        GenerationSparseSet<State> m6({7, 8}, 10);
+        p2.split_blocks(m6);
+        std::cout << p1 << p2 << std::endl; 
+        CHECK(p1 == p2);
+    }
+    
+    SECTION("Block marking") {
+        Partition p{10};
+        CHECK(!p.is_marked(0));
+        CHECK(!p.is_touched(0));
+        p.mark(0);
+        p.mark(3);
+        p.mark(7);
+        p.mark(8);
+        CHECK(p.is_marked(0));
+        CHECK(!p.is_marked(1));
+        CHECK(!p.is_marked(2));
+        CHECK(p.is_marked(3));
+        CHECK(!p.is_marked(4));
+        CHECK(p.is_touched(0));
+        p.mark(0);
+        p.mark(3);
+        p.mark(7);
+        p.mark(8);
+        CHECK(p.is_marked(0));
+        CHECK(p.is_touched(0));
+        p.clear_markings();
+        CHECK(!p.is_marked(0));
+        CHECK(!p.is_touched(0));        
+    }
+
+    SECTION("Block splitting by inner marking") {
+        Partition p{10};
+        CHECK(p.num_of_blocks() == 1);
+        p.mark(0);
+        p.mark(3);
+        p.mark(7);
+        p.mark(8);
+        p.split_blocks_inner(0);
+        p.clear_markings();
+        CHECK(p.num_of_blocks() == 2);
+        CHECK(p.in_same_block(0, 3));
+        CHECK(!p.in_same_block(0, 2));
+        p.mark(0);
+        p.mark(1);
+        p.split_blocks_inner(0);
+        p.split_blocks_inner(1);
+        p.clear_markings();
+        CHECK(p.num_of_blocks() == 4);
+        CHECK(!p.in_same_block(0, 3));
+        CHECK(!p.in_same_block(0, 2));
+        CHECK(p.in_same_block(7, 8));
+        CHECK(p.in_same_block(9, 5));
+    }
+
+    SECTION("Chosen block splitting by inner marking") {
+        Partition p{10};
+        p.mark(0);
+        p.mark(3);
+        p.mark(7);
+        p.mark(8);
+        p.split_blocks_inner(0);
+        p.clear_markings();
+        p.mark(0);
+        p.mark(3);
+        CHECK(p.num_of_blocks() == 2);
+        p.split_blocks_inner(1);
+        CHECK(p.in_same_block(0, 7));
+        CHECK(p.num_of_blocks() == 2); 
+        p.split_blocks_inner(0);
+        CHECK(!p.in_same_block(0, 7));
+        CHECK(p.num_of_blocks() == 3);            
+    }
+
+}
